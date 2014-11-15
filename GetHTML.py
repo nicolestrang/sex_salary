@@ -6,6 +6,8 @@ import unicodedata
 from hammock import Hammock as GenderAPI
 import json
 import pdb
+from tempfile import TemporaryFile
+outfile=TemporaryFile()
 
 for pg in range(8):
     # Convert web page to html
@@ -56,18 +58,24 @@ sal_col=data_array[:,4].astype(np.float)
 ben_col=data_array[:,5].astype(np.float)
 total_comp=sal_col + ben_col
 total_comp=total_comp.reshape(-1,1)
-print(np.mean(total_comp))
+#print(np.mean(total_comp))
+
+np.save('SalaryDisclosure.npy', data_array)
+outfile.seek(0)
 
 #pdb.set_trace()
 # Get Names to Gender
-#for r in range(nrows):
-#    firstname=unicodedata.normalize('NFKD',data_array[r,2]).encode('ascii','ignore')
-#    surname=unicodedata.normalize('NFKD',data_array[r,1]).encode('ascii','ignore')
-#    command='\''+ firstname + '\',\'' + surname + '\''
-#    gendre=GenderAPI("http://api.namsor.com/onomastics/api/json/gendre/" + firstname +'/' +     surname)
-#    resp=gendre.GET()
-#    sex=(resp.json().get('scale'))
-#    gen_col[r]=sex
+outfile=TemporaryFile()
+for r in range(nrows):
+    firstname=unicodedata.normalize('NFKD',data_array[r,2]).encode('ascii','ignore')
+    surname=unicodedata.normalize('NFKD',data_array[r,1]).encode('ascii','ignore')
+    command='\''+ firstname + '\',\'' + surname + '\''
+    gendre=GenderAPI("http://api.namsor.com/onomastics/api/json/gendre/" + firstname +'/' +  surname)
+    resp=gendre.GET()
+    sex=(resp.json().get('scale'))
+    gen_col[r]=sex
+np.save('Gender.npy', gen_col)
+outfile.seek(0)
 #male=gen_col<-.07
 #female=gen_col>.07
 #print(np.mean(total_comp[male]))
