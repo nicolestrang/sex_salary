@@ -76,7 +76,7 @@ for r in range(nrows):
     gen_col[r]=sex
 np.save('Gender.npy', gen_col)
 outfile.seek(0)
-#male=gen_col<-.07
-#female=gen_col>.07
+#male=gen_col<-.47
+#female=gen_col>.47
 #print(np.mean(total_comp[male]))
 #print(np.mean(total_comp[female]))
