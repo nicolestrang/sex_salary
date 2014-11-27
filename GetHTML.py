@@ -58,7 +58,6 @@ sal_col=data_array[:,4].astype(np.float)
 ben_col=data_array[:,5].astype(np.float)
 total_comp=sal_col + ben_col
 total_comp=total_comp.reshape(-1,1)
-#print(np.mean(total_comp))
 
 np.save('SalaryDisclosure.npy', data_array)
 outfile.seek(0)
@@ -76,7 +75,3 @@ for r in range(nrows):
     gen_col[r]=sex
 np.save('Gender.npy', gen_col)
 outfile.seek(0)
-#male=gen_col<-.47
-#female=gen_col>.47
-#print(np.mean(total_comp[male]))
-#print(np.mean(total_comp[female]))
