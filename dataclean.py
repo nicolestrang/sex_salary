@@ -55,6 +55,7 @@ n_groups=3
 fig, ax=plt.subplots()
 index=np.arange(n_groups)
 bar_width=0.35
+plt.ylim(100000,180000)
 
 opacity=0.4
 error_config={'ecolor':'0.3'}
@@ -69,7 +70,7 @@ rects2=plt.bar(index+bar_width, male_m, bar_width,
 
 plt.ylabel('Compensation')
 plt.title('Pay by Rank and Sex')
-plt.xticks(index+bar_width, ('Assistant Profesor', 'Associate Profesor',
+plt.xticks(index+bar_width, ('Assistant Professor', 'Associate Professor',
     'Professor'))
 
 #plt.legend()
@@ -107,12 +108,12 @@ rects2=plt.bar(index+bar_width, male_s, bar_width,
 
 plt.ylabel('Compensation')
 plt.title('Pay by Rank and Sex')
-plt.xticks(index+bar_width, ('Assistant Profesor', 'Associate Profesor',
+plt.xticks(index+bar_width, ('Assistant Professor', 'Associate Professor',
     'Professor'))
 
 #plt.legend()
 
-plt.tight_layout()
+#plt.tight_layout()
 plt.show()
 
 
