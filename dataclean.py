@@ -1,9 +1,9 @@
 #!/usr/bin/python
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import stats
+#from scipy import stats
 import pandas as pd
-import pdb
+#import pdb
 import math
 
 # Load data
@@ -37,7 +37,7 @@ sexlist=['male','female']
 df_f=df[df['Rank'].isin(RankList) & df['Sex'].isin(sexlist)]
 df_fc=df_f[['University','Sex','Rank','TotalCompensation']]
 
-# Create a pivot table to figure out number by cell
+# Create a pivot table to figure out number by university and rank
 num_val=pd.pivot_table(df_fc, values='TotalCompensation', 
                        index=['University'],columns=['Rank'], aggfunc='count')
                        
@@ -53,9 +53,18 @@ for uni in all_uni:
         if r=='Professor':
             good_unis.append(uni)
 
-        
+
+                               
 # Select cases in universities with at least 20 cases by rank
 df_fc_redux=df_fc[df_fc['University'].isin(good_unis)]
+
+# Create pivot table with count of men and women by University and Rank
+num_by_RS=pd.pivot_table(df_fc_redux,values='TotalCompensation',
+                         index=['Sex'],columns=['Rank'],
+                         aggfunc='count')
+num_by_uni=pd.pivot_table(df_fc_redux, values='TotalCompensation', 
+                       index=['University','Sex'],columns=['Rank'], 
+                       aggfunc='count')
 
 # Save data file to text for statistical analysis
 df_fc_redux.to_csv('sexsalary.txt', encoding='utf-8')
@@ -70,7 +79,69 @@ comp_by_RS_sem=comp_by_RS_std/np.sqrt(pd.pivot_table(df_fc_redux,values='TotalCo
                        index=['Sex'],columns=['Rank'], 
                         aggfunc='count'))
                         
-#Graph overall mean and standard deviation for all cases
+# Make pie charts of percentage of men and women
+# Pie chart of all men and women faculty on list
+p_female=(np.float(sum(num_by_RS.loc['female']))/(sum(num_by_RS.loc['female'])+
+    sum(num_by_RS.loc['male'])))*100
+p_male=100-p_female
+labels='Male','Female'
+sizes=[p_male,p_female]
+colors=['blue','red']
+explode=(0,0.1)
+plt.pie(sizes,explode=explode,labels=labels, colors=colors,autopct='%1.1f%%',
+        shadow=True, startangle=90)
+plt.axis('equal')
+plt.title('All Faculty')
+plt.show()
+
+# Pie chart for all men and women faculty by rank
+for rank in all_rank:
+    p_female=(np.float(num_by_RS.loc['female', rank])/
+        (num_by_RS.loc['female',rank]+
+        num_by_RS.loc['male', rank]))*100
+    p_male=100-p_female
+    labels='Male','Female'
+    sizes=[p_male,p_female]
+    colors=['blue','red']
+    explode=(0,0.1)
+    plt.pie(sizes,explode=explode,labels=labels, colors=colors,autopct='%1.1f%%',
+    shadow=True, startangle=90)
+    plt.axis('equal')
+    plt.title(rank)
+    plt.show()
+    
+for uni in good_unis:
+    p_female=(np.float(sum(num_by_uni.loc[uni,'female']))/
+            (sum(num_by_uni.loc[uni,'female'])+
+            sum(num_by_uni.loc[uni,'male'])))*100
+    p_male=100-p_female
+    labels='Male','Female'
+    sizes=[p_male,p_female]
+    colors=['blue','red']
+    explode=(0,0.1)
+    plt.pie(sizes,explode=explode,labels=labels, colors=colors,
+            autopct='%1.1f%%',shadow=True, startangle=90)
+    plt.axis('equal')
+    plt.title(uni)
+    plt.show()
+    for rank in all_rank:
+        p_female=(np.float(num_by_uni[rank].loc[uni,'female'])/
+            (num_by_uni[rank].loc[uni, 'female']+
+            num_by_uni[rank].loc[uni, 'male']))*100
+        p_male=100-p_female
+        labels='Male','Female'
+        sizes=[p_male,p_female]
+        colors=['blue','red']
+        explode=(0,0.1)
+        plt.pie(sizes,explode=explode,labels=labels, colors=colors,autopct='%1.1f%%',
+                shadow=True, startangle=90)
+        plt.axis('equal')
+        plt.title(uni + ' ' +rank)
+        plt.show()
+                   
+
+
+#Graph overall mean compensations and standard error of the mean for all cases
 n_groups=3
 fig, ax=plt.subplots()
 index=np.arange(n_groups)
@@ -98,15 +169,15 @@ plt.tight_layout()
 # Calculate means and standard error of the mean by university
 comp_by_uni= pd.pivot_table(df_fc_redux,values='TotalCompensation', 
                        index=['University', 'Sex'],columns=['Rank'])
-print comp_by_uni
+#print comp_by_uni
 comp_by_uni_std= pd.pivot_table(df_fc_redux,values='TotalCompensation', 
                        index=['University','Sex'],columns=['Rank'], 
                         aggfunc=np.std)
-print comp_by_uni_std
+#print comp_by_uni_std
 comp_by_uni_sem=comp_by_uni_std/np.sqrt(pd.pivot_table(df_fc_redux,values='TotalCompensation', 
                        index=['University','Sex'],columns=['Rank'], 
                         aggfunc='count'))
-print comp_by_uni_sem
+#print comp_by_uni_sem
 
 
 #Graph Means for each university
@@ -131,6 +202,5 @@ for uni in good_unis:
     plt.ylabel('Compensation')
     plt.title(uni)
     plt.xticks(index+bar_width, ('Assistant Professor', 'Associate Professor',
-    'Professor'))
-    plt.legend()
+    'Professor'))    
     plt.tight_layout()   
