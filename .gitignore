@@ -1,3 +1,6 @@
 ## Numpy data files
 *.npy
+## image Files
 *.png
+## Hidden files
+.*
