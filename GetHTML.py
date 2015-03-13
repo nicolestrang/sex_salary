@@ -4,8 +4,8 @@ from bs4 import BeautifulSoup
 import numpy as np
 import unicodedata
 from hammock import Hammock as GenderAPI
-import json
-import pdb
+##import json
+#import pdb
 from tempfile import TemporaryFile
 outfile=TemporaryFile()
 

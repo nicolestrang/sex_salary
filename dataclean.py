@@ -1,10 +1,12 @@
 #!/usr/bin/python
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-#from scipy import stats
 import pandas as pd
-#import pdb
 import math
+import os
+#from matplotlib.backends.backend_pdf import PdfPages
 
 # Load data
 gen_col=np.load('Gender.npy')
@@ -79,92 +81,94 @@ comp_by_RS_sem=comp_by_RS_std/np.sqrt(pd.pivot_table(df_fc_redux,values='TotalCo
                        index=['Sex'],columns=['Rank'], 
                         aggfunc='count'))
                         
+# Create out directory for graphs
+if not os.path.exists('Graphs'):
+    os.makedirs('Graphs')                        
+                       
 # Make pie charts of percentage of men and women
 # Pie chart of all men and women faculty on list
-p_female=(np.float(sum(num_by_RS.loc['female']))/(sum(num_by_RS.loc['female'])+
-    sum(num_by_RS.loc['male'])))*100
-p_male=100-p_female
-labels='Male','Female'
-sizes=[p_male,p_female]
-colors=['blue','red']
-explode=(0,0.1)
-plt.pie(sizes,explode=explode,labels=labels, colors=colors,autopct='%1.1f%%',
-        shadow=True, startangle=90)
-plt.axis('equal')
-plt.title('All Faculty')
-plt.show()
-
-# Pie chart for all men and women faculty by rank
-for rank in all_rank:
-    p_female=(np.float(num_by_RS.loc['female', rank])/
-        (num_by_RS.loc['female',rank]+
-        num_by_RS.loc['male', rank]))*100
-    p_male=100-p_female
+def plotPieGraph(Title):
     labels='Male','Female'
     sizes=[p_male,p_female]
     colors=['blue','red']
     explode=(0,0.1)
-    plt.pie(sizes,explode=explode,labels=labels, colors=colors,autopct='%1.1f%%',
-    shadow=True, startangle=90)
-    plt.axis('equal')
-    plt.title(rank)
-    plt.show()
-    
+    fig=plt.pie(sizes,explode=explode,labels=labels, colors=colors,autopct='%1.1f%%',
+        shadow=True, startangle=90)
+    fig=plt.axis('equal')
+    fig=plt.title(Title)
+    return fig
+
+# Open pdf    
+#with PdfPages('PercentWomen_AllFaculty.pdf') as pdf:
+p_female=(np.float(sum(num_by_RS.loc['female']))/(sum(num_by_RS.loc['female'])+
+    sum(num_by_RS.loc['male'])))*100
+p_male=100-p_female
+plotPieGraph('All Faculty')
+plt.savefig('Graphs/AllFaculty_pFem.png')
+plt.close()
+
+# Pie chart for all men and women faculty by rank
+for rank in all_rank:
+    p_female=(np.float(num_by_RS.loc['female', rank])/
+            (num_by_RS.loc['female',rank]+
+            num_by_RS.loc['male', rank]))*100
+    p_male=100-p_female
+    plotPieGraph(rank)
+    plt.savefig('Graphs/' + rank + '.png')
+    plt.close()
+
 for uni in good_unis:
     p_female=(np.float(sum(num_by_uni.loc[uni,'female']))/
             (sum(num_by_uni.loc[uni,'female'])+
             sum(num_by_uni.loc[uni,'male'])))*100
     p_male=100-p_female
-    labels='Male','Female'
-    sizes=[p_male,p_female]
-    colors=['blue','red']
-    explode=(0,0.1)
-    plt.pie(sizes,explode=explode,labels=labels, colors=colors,
-            autopct='%1.1f%%',shadow=True, startangle=90)
-    plt.axis('equal')
-    plt.title(uni)
-    plt.show()
+    plotPieGraph(uni)
+    if 'Ottawa' in uni:
+        plt.savefig('Graphs/University of Ottawa_pfem.png')    
+    else:
+        plt.savefig('Graphs/' + uni + '_pfem.png')
+    plt.close()
+
     for rank in all_rank:
         p_female=(np.float(num_by_uni[rank].loc[uni,'female'])/
-            (num_by_uni[rank].loc[uni, 'female']+
-            num_by_uni[rank].loc[uni, 'male']))*100
+                (num_by_uni[rank].loc[uni, 'female']+
+                num_by_uni[rank].loc[uni, 'male']))*100
         p_male=100-p_female
-        labels='Male','Female'
-        sizes=[p_male,p_female]
-        colors=['blue','red']
-        explode=(0,0.1)
-        plt.pie(sizes,explode=explode,labels=labels, colors=colors,autopct='%1.1f%%',
-                shadow=True, startangle=90)
-        plt.axis('equal')
-        plt.title(uni + ' ' +rank)
-        plt.show()
-                   
-
+        plotPieGraph(uni + ' ' + rank)
+        if 'Ottawa' in uni:
+            plt.savefig('Graphs/University of Ottawa_' + rank + '_pfem.png') 
+        else:
+            plt.savefig('Graphs/' + uni + '_' + rank + '_pfem.png')
+        plt.close()
 
 #Graph overall mean compensations and standard error of the mean for all cases
-n_groups=3
-fig, ax=plt.subplots()
-index=np.arange(n_groups)
-bar_width=0.35
-plt.ylim(100000,220000)
+def plotSalary_by_RankSex(Title, avg_comp, sem_comp):
+    n_groups=3
+    fig, ax=plt.subplots()
+    index=np.arange(n_groups)
+    bar_width=0.35
+    plt.ylim(100000,220000)
+    opacity=0.4
+    error_config={'ecolor':'0.3'}
+    plt.bar(index, avg_comp.loc["female"], bar_width,
+                   alpha=opacity, color='r', yerr=sem_comp.loc["female"],
+                   error_kw=error_config,label='Women')
+    plt.bar(index+bar_width, avg_comp.loc["male"], bar_width,
+                   alpha=opacity, color='b', yerr=sem_comp.loc["male"],
+                    error_kw=error_config, label='Men')
+    plt.ylabel('Compensation')
+    plt.xticks(index+bar_width, ('Assistant Professor', 'Associate Professor',
+                                 'Professor'))
+    plt.title(Title)
+    plt.legend()
+    plt.tight_layout()
+    return fig
+    
+plotSalary_by_RankSex(Title='Pay by Rank and Sex (All Universities)', 
+                      avg_comp=comp_by_RS, sem_comp=comp_by_RS_sem)
+plt.savefig('Graphs/PayRankSex.png')
+plt.close()
 
-opacity=0.4
-error_config={'ecolor':'0.3'}
-
-rects1=plt.bar(index, comp_by_RS.loc["female"], bar_width,
-        alpha=opacity, color='r', yerr=comp_by_RS_sem.loc["female"],
-       error_kw=error_config,label='Women')
-
-rects2=plt.bar(index+bar_width, comp_by_RS.loc["male"], bar_width,
-        alpha=opacity, color='b', yerr=comp_by_RS_sem.loc["male"],
-        error_kw=error_config, label='Men')
-
-plt.ylabel('Compensation')
-plt.title('Pay by Rank and Sex (All Universities)')
-plt.xticks(index+bar_width, ('Assistant Professor', 'Associate Professor',
-    'Professor'))
-plt.legend()
-plt.tight_layout()
 
 # Calculate means and standard error of the mean by university
 comp_by_uni= pd.pivot_table(df_fc_redux,values='TotalCompensation', 
@@ -177,30 +181,35 @@ comp_by_uni_std= pd.pivot_table(df_fc_redux,values='TotalCompensation',
 comp_by_uni_sem=comp_by_uni_std/np.sqrt(pd.pivot_table(df_fc_redux,values='TotalCompensation', 
                        index=['University','Sex'],columns=['Rank'], 
                         aggfunc='count'))
-#print comp_by_uni_sem
 
-
-#Graph Means for each university
-for uni in good_unis:
+#Graph overall mean compensations and standard error of the mean by university
+def plotSalary_by_RankSexUni(Title, avg_comp, sem_comp, x):
     n_groups=3
     fig, ax=plt.subplots()
     index=np.arange(n_groups)
     bar_width=0.35
     plt.ylim(100000,220000)
-
     opacity=0.4
     error_config={'ecolor':'0.3'}
-
-    rects1=plt.bar(index, comp_by_uni.loc[uni, "female"], bar_width,
-                   alpha=opacity, color='r', yerr=comp_by_uni_sem.loc[uni, "female"],
+    plt.bar(index, avg_comp.loc[x, "female"], bar_width,
+                   alpha=opacity, color='r', yerr=sem_comp.loc[x, "female"],
                    error_kw=error_config,label='Women')
-
-    rects2=plt.bar(index+bar_width, comp_by_uni.loc[uni, "male"], bar_width,
-                   alpha=opacity, color='b', yerr=comp_by_uni_sem.loc[uni, "male"],
+    plt.bar(index+bar_width, avg_comp.loc[x, "male"], bar_width,
+                   alpha=opacity, color='b', yerr=sem_comp.loc[x, "male"],
                     error_kw=error_config, label='Men')
-
     plt.ylabel('Compensation')
-    plt.title(uni)
     plt.xticks(index+bar_width, ('Assistant Professor', 'Associate Professor',
-    'Professor'))    
-    plt.tight_layout()   
+                                 'Professor'))
+    plt.title(Title)
+    plt.legend()
+    plt.tight_layout()
+    return fig
+
+for uni in good_unis:    
+    plotSalary_by_RankSexUni(Title= uni + 'Pay by Rank and Sex', 
+                      avg_comp=comp_by_uni, sem_comp=comp_by_uni_sem,x=uni )
+    if 'Ottawa' in uni:
+        plt.savefig('Graphs/Pay_University of Ottawa.png')
+    else:
+        plt.savefig('Graphs/Pay_' + uni + '.png')
+    plt.close() 
