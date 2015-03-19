@@ -6,22 +6,24 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import math
 import os
-#from matplotlib.backends.backend_pdf import PdfPages
+import scipy
+from statsmodels.formula.api import ols
+from statsmodels.stats.anova import anova_lm
+import unicodedata
+from hammock import Hammock as GenderAPI
+from tempfile import TemporaryFile
+outfile=TemporaryFile()
 
 # Load data
-gen_col=np.load('Gender.npy')
+#gen_col=np.load('Gender.npy')
 SalaryDisclosure=np.load('SalaryDisclosure.npy')
 df=pd.DataFrame(data=SalaryDisclosure,
-                columns=['University','First Name','Last Name','Job Title',
+                columns=['University','Last Name','First Name','Job Title',
                 'Salary','Benefits'])
 
 #convert to correct data types
 df['Salary']=df['Salary'].astype('float')
 df['Benefits']=df['Benefits'].astype('float')
-
-# Identify males and females (use list comprehension to add to data frame)
-df['Sex']=[('male' if x < -.47 else ('female' if x > .47 else 'unknown')) for 
-    x in gen_col]
 
 # Create column for total compensation
 df['TotalCompensation']=df['Salary'] + df['Benefits']
@@ -32,52 +34,76 @@ df['Rank']=['Assistant Professor' if np.char.find(x,'Assistant Professor') >-1
     else 'Professor' if np.char.find(x,'Professor') > -1 else 'Faculty' if 
     np.char.find(x,'Faculty')>-1 else 'Non Faculty' 
     for x in df['Job Title']]
-        
-# Generate a dataframe with only professors with rank
+
+# Generate a dataframe that only contain professors with rank
 RankList=['Assistant Professor','Associate Professor', 'Professor']
-sexlist=['male','female']
-df_f=df[df['Rank'].isin(RankList) & df['Sex'].isin(sexlist)]
-df_fc=df_f[['University','Sex','Rank','TotalCompensation']]
+# sexlist=['male','female']
+df_f=df[df['Rank'].isin(RankList)]
+# df_fc=df_f[['University','Rank','TotalCompensation']]
 
 # Create a pivot table to figure out number by university and rank
-num_val=pd.pivot_table(df_fc, values='TotalCompensation', 
-                       index=['University'],columns=['Rank'], aggfunc='count')
+num_rank=pd.pivot_table(df_f, values='TotalCompensation', 
+               index=['University'],columns=['Rank'], aggfunc='count')
                        
-# Create a list of Universities that have at least 20 cases per rank
-all_uni=list(num_val.index.values)
-all_rank=list(num_val.columns.values)
+# Create a list of Universities that have at least 30 cases per rank
+all_uni=list(num_rank.index.values)
+all_rank=list(num_rank.columns.values)
 good_unis=[]
 for uni in all_uni:
     for r in all_rank:
         #print num_val.loc[uni,r]
-        if num_val.loc[uni,r] < 20 or math.isnan(num_val.loc[uni,r]):
+        if num_rank.loc[uni,r] < 30 or math.isnan(num_rank.loc[uni,r]):
             break
         if r=='Professor':
             good_unis.append(uni)
 
-
-                               
 # Select cases in universities with at least 20 cases by rank
-df_fc_redux=df_fc[df_fc['University'].isin(good_unis)]
+df_redux=df_f[df_f['University'].isin(good_unis)]
+df_redux['SexVal']=0
+nrows=len(df_redux)
+gen_col=np.zeros((nrows, 1), dtype='float')
+# Get Names to Gender
+outfile=TemporaryFile()
+r=0
+for index, row in df_redux.iterrows():
+#for r in range(nrows):
+    print nrows-r
+    firstname=unicodedata.normalize('NFKD', row['First Name']).encode('ascii','ignore')
+    surname=unicodedata.normalize('NFKD', row['Last Name']).encode('ascii','ignore')  
+    gendre=GenderAPI("http://api.namsor.com/onomastics/api/json/gendre/" + firstname +'/' +  surname)
+    resp=gendre.GET()
+    sex=(resp.json().get('scale'))
+    gen_col[r]=sex    
+    r=r+1
+#np.save('Gender.npy', gen_col)
+outfile.seek(0)
+
+# Identify males and females (use list comprehension to add to data frame)
+df_redux['Sex']=[('male' if x < -.47 else ('female' if x > .47 else 'unknown')) for 
+    x in gen_col]
+
+sexlist=['male','female']
+df_mf=df_redux[df_redux['Sex'].isin(sexlist)]
 
 # Create pivot table with count of men and women by University and Rank
-num_by_RS=pd.pivot_table(df_fc_redux,values='TotalCompensation',
+num_by_RS=pd.pivot_table(df_mf,values='TotalCompensation',
                          index=['Sex'],columns=['Rank'],
                          aggfunc='count')
-num_by_uni=pd.pivot_table(df_fc_redux, values='TotalCompensation', 
+num_by_uni=pd.pivot_table(df_mf, values='TotalCompensation', 
                        index=['University','Sex'],columns=['Rank'], 
                        aggfunc='count')
 
 # Save data file to text for statistical analysis
-df_fc_redux.to_csv('sexsalary.txt', encoding='utf-8')
+#df_fc_redux.to_csv('sexsalary.txt', encoding='utf-8')
+np.save('sexsalary.npy', df_mf)
 
 #Create pivot table of means and standard deviations for all cases
-comp_by_RS= pd.pivot_table(df_fc_redux,values='TotalCompensation', 
+comp_by_RS= pd.pivot_table(df_mf,values='TotalCompensation', 
                        index=['Sex'],columns=['Rank'])
-comp_by_RS_std= pd.pivot_table(df_fc_redux,values='TotalCompensation', 
+comp_by_RS_std= pd.pivot_table(df_mf,values='TotalCompensation', 
                        index=['Sex'],columns=['Rank'], 
                         aggfunc=np.std)
-comp_by_RS_sem=comp_by_RS_std/np.sqrt(pd.pivot_table(df_fc_redux,values='TotalCompensation', 
+comp_by_RS_sem=comp_by_RS_std/np.sqrt(pd.pivot_table(df_mf,values='TotalCompensation', 
                        index=['Sex'],columns=['Rank'], 
                         aggfunc='count'))
                         
@@ -98,8 +124,7 @@ def plotPieGraph(Title):
     fig=plt.title(Title)
     return fig
 
-# Open pdf    
-#with PdfPages('PercentWomen_AllFaculty.pdf') as pdf:
+
 p_female=(np.float(sum(num_by_RS.loc['female']))/(sum(num_by_RS.loc['female'])+
     sum(num_by_RS.loc['male'])))*100
 p_male=100-p_female
@@ -171,14 +196,14 @@ plt.close()
 
 
 # Calculate means and standard error of the mean by university
-comp_by_uni= pd.pivot_table(df_fc_redux,values='TotalCompensation', 
+comp_by_uni= pd.pivot_table(df_mf,values='TotalCompensation', 
                        index=['University', 'Sex'],columns=['Rank'])
 #print comp_by_uni
-comp_by_uni_std= pd.pivot_table(df_fc_redux,values='TotalCompensation', 
+comp_by_uni_std= pd.pivot_table(df_mf,values='TotalCompensation', 
                        index=['University','Sex'],columns=['Rank'], 
                         aggfunc=np.std)
 #print comp_by_uni_std
-comp_by_uni_sem=comp_by_uni_std/np.sqrt(pd.pivot_table(df_fc_redux,values='TotalCompensation', 
+comp_by_uni_sem=comp_by_uni_std/np.sqrt(pd.pivot_table(df_mf,values='TotalCompensation', 
                        index=['University','Sex'],columns=['Rank'], 
                         aggfunc='count'))
 
@@ -213,3 +238,46 @@ for uni in good_unis:
     else:
         plt.savefig('Graphs/Pay_' + uni + '.png')
     plt.close() 
+    # Load data
+#sexsalary=np.load('sexsalary.npy')
+formula = 'TotalCompensation ~ C(Sex) + C(Rank) + C(Sex):C(Rank)'
+lm = ols(formula, df_mf).fit()
+anova_rslt=(anova_lm(lm))
+print anova_rslt
+
+rank_lst=np.unique(df_mf.Rank.values)
+for rnk in rank_lst:
+    print rnk
+    df_rnk=df_mf[df_mf['Rank']==rnk]
+    m_comp=df_rnk.TotalCompensation[df_rnk['Sex']=='male']
+    f_comp=df_rnk.TotalCompensation[df_rnk['Sex']=='female']
+    #Check for equality of variances and run appropriate test    
+    eq_var=scipy.stats.levene(m_comp, f_comp)
+    if eq_var[1] < 0.05:
+        print "unequal var"
+        print scipy.stats.ttest_ind(m_comp, f_comp, equal_var=False)
+    else:
+        print "equal var"
+        print scipy.stats.ttest_ind(m_comp, f_comp)
+    
+# Run Anovas for all schools to examine whether there is an effect of sex,
+#rank, and interaction between sex and rank
+
+for uni in good_unis:
+    print uni
+    df_school=df_mf[df_mf['University']==uni]
+    formula = 'TotalCompensation ~ C(Sex) + C(Rank) + C(Sex):C(Rank)'
+    lm = ols(formula, df_school).fit()
+    print(anova_lm(lm))
+ 
+    for rnk in rank_lst:
+        print rnk
+        df_sch_rnk=df_school[df_school['Rank']==rnk]
+        m_comp=df_sch_rnk.TotalCompensation[df_sch_rnk['Sex']=='male']
+        f_comp=df_sch_rnk.TotalCompensation[df_sch_rnk['Sex']=='female']
+        #Check for equality of variances and run appropriate test    
+        eq_var=scipy.stats.levene(m_comp, f_comp)
+        if eq_var[1] < 0.05:
+            print scipy.stats.ttest_ind(m_comp, f_comp, equal_var=False)
+        else:
+            print scipy.stats.ttest_ind(m_comp, f_comp)

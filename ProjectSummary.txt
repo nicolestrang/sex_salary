@@ -1,34 +1,1 @@
-The goal of this project was to examine whether the is a discrepency between thesalary of male and female professors in Ontario in the 2014 fiscal year. Additonally, I examined the proportions of professors by rank (i.e., assistant professor, associate professor, professor) that are female.
-
-In Ontario, any public employee who's annual salary exceeds $100000 is reported in a public salary disclosure. The salary disclosure contains the employer, the first and last name of the empyloyee, the position, the value of the salary, and value of the taxable benefits. Most univesities indicate whether the position is assistant professor, associate professor, or professor.
-
-I webscraped the data from the public salary disclosure lists of universities 
-for the 2014 Fiscal Year, and tranformed it into the necessary formats for 
-futher analyses.
-
-The sex of the employes is not given in the public salary disclosure. To 
-determine the sex of the employee I used NamSor Gender API 
-(http://namesorts.com/api/) which returns a probability of whether the name is 
-male or female (-1 is male and +1 is female). I visually inspected the data and
-found that using a cutoff of > -.47 for male and <.47 seemed to provide me with a conservative estimate of the proportion of males and females. Those employees
-whose name was rated with a probability between -.47 and .47 were excluded from any further analyses.
-
-I excluded any universities with fewer than 20 cases in any rank (e.g., 
-assistant professor, associate professor, professor) from further analyses.
-
-With the remaining data, I produced pie graphs to represent the proportion of 
-female professors across a number of different categories (i.e., school, and 
-school by rank).
-
-To figure out whether salary differed by sex and rank, I calculate the mean 
-salary of women and men at each rank. I also did this for each university.
-Additionally I calculated the standard error of the mean, to give a visual
-representation of the variabilty within each sample. I produced graphs of pay
-by sex and rank for all cases as well as for each school. In addtion to the
-mean by group I also plotted the standard error of the mean.
-
-The R script is used to examine whether the differences are statiscially 
-significant. The script runs a two factor ANOVA(Sex, Rank) for each grouping
-(all cases, cases in each school). The script also runs independent samples 
-t-tests at each rank to determine whether there is a difference between male
-and female salaries.   
+The goal of this project was to examine whether male professors make more money than female professors in similiar positions,in Ontario in the 2014 fiscal year. Additionally, I examined the proportions of professors by rank (i.e., assistant professor, associate professor, professor) that are female.In Ontario, any public employee whose's annual salary exceeds $100 000 is reported in a public salary disclosure. The salary disclosure contains the employer, the first and last name of the employee, the position, the value of the salary, and value of the taxable benefits. Most universities indicate whether the position is assistant professor, associate professor, or professor.I webscraped the data from the public salary disclosure lists of universities for the 2014 Fiscal Year, and transformed it into the necessary formats for further analyses.The sex of the employees is not given in the public salary disclosure. To determine the sex of the employee I used NamSor Gender API (http://namesorts.com/api/) which returns a probability of whether the name is male or female (-1 is male and +1 is female). I visually inspected the data and found that using a cutoff of > -.47 for male and <.47 seemed to provide me with a conservative estimate of the proportion of males and females. Those employees whose name was rated with a probability between -.47 and .47 were excluded from any further analyses.I excluded any universities with fewer than 20 cases in any rank (e.g., assistant professor, associate professor, professor) from further analyses.With the remaining data, I produced pie graphs to represent the proportion of female professors across a number of different categories (i.e., school, and school by rank).To figure out whether salary differed by sex and rank, I calculated the mean salary of women and men at each rank. I also did this for each university. Additionally I calculated the standard error of the mean, to give a visual representation of the variability within each sample. I produced graphs of pay by sex and rank for all cases ,as well as ,for each school. In addition to the mean by group I also plotted the standard error of the mean.The script also examines whether differences are statistically significant. The script runs a two factor ANOVA(Sex, Rank) for each grouping (all cases, cases in each school). The script also runs independent samples t-tests at each rank to determine whether there is a difference between male and female salaries.   The results of the statistical tests indicate that when all professors are considered as a group, men make more money than women, salary varies by rank, and there is an interaction between sex and rank (i.e., the size of the difference in salary between men and women depends on their rank.) Follow-up independent samples t-tests  indicate men make more money than women at all ranks.
